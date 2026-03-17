@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Photo Booth</title>
+  <style>
+    * { box-sizing: border-box; font-family: Arial, sans-serif; }
+    body { margin: 0; background: #eee; }
+
+    /* ---------- PAGE 1 ---------- */
+    .page { display: none; height: 100vh; }
+    .page.active { display: flex; }
+
+    .landing {
+      background: #b52a22;
+      color: white;
+      width: 100%;
+      align-items: center;
+      justify-content: center;
+      flex-direction: column;
+    }
+
+    .landing h1 { font-size: 64px; margin-bottom: 40px; }
+
+    .start-btn {
+      padding: 14px 40px;
+      font-size: 22px;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+    }
+
+    /* ---------- PAGE 2 ---------- */
+    .booth {
+      background: #b52a22;
+      padding: 20px;
+      display: flex;
+      gap: 20px;
+      color: white;
+    }
+
+    .camera-area {
+      flex: 1;
+      background: #f4f4f4;
+      position: relative;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    video { width: 75%; height: 75%; object-fit: cover; }
+
+    .countdown {
+      position: absolute;
+      font-size: 120px;
+      color: red;
+      font-weight: bold;
+      display: none;
+    }
+
+    .controls {
+      margin-top: 10px;
+      text-align: center;
+    }
+
+    .strip {
+      width: 200px;
+      background: black;
+      padding: 10px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .strip img {
+      width: 100%;
+      background: #ddd;
+    }
+
+    .download-btn {
+      margin-top: auto;
+      padding: 10px;
+      background: #b52a22;
+      color: white;
+      border: none;
+      cursor: pointer;
+    }
+  </style>
+</head>
+<body>
+
+<!-- PAGE 1 -->
+<div class="page landing active" id="page1">
+  <h1>PHOTO BOOTH</h1>
+  <button class="start-btn" onclick="goBooth()">START</button>
+</div>
+
+<!-- PAGE 2 -->
+<div class="page booth" id="page2">
+  <div style="flex:1; display:flex; flex-direction:column;">
+    <h1 style="text-align:center;">SMILE!</h1>
+    <div class="camera-area">
+      <video id="video" autoplay></video>
+      <div class="countdown" id="countdown">3</div>
+    </div>
+    <div class="controls">
+      <button class="start-btn" onclick="startBooth()">START</button>
+    </div>
+  </div>
+
+  <div class="strip">
+    <img id="img1" />
+    <img id="img2" />
+    <img id="img3" />
+    <button class="download-btn" onclick="downloadStrip()">download</button>
+  </div>
+</div>
+
+<canvas id="canvas" style="display:none;"></canvas>
+
+<script>
+  const page1 = document.getElementById('page1');
+  const page2 = document.getElementById('page2');
+  const video = document.getElementById('video');
+  const canvas = document.getElementById('canvas');
+  const countdownEl = document.getElementById('countdown');
+  const imgs = [img1, img2, img3];
+  let photoCount = 0;
+
+  function goBooth() {
+    page1.classList.remove('active');
+    page2.classList.add('active');
+    navigator.mediaDevices.getUserMedia({ video: true })
+      .then(stream => video.srcObject = stream);
+  }
+
+  async function startBooth() {
+    if (photoCount >= 3) return;
+
+    for (let i = 3; i > 0; i--) {
+      countdownEl.innerText = i;
+      countdownEl.style.display = 'block';
+      await new Promise(r => setTimeout(r, 1000));
+    }
+    countdownEl.style.display = 'none';
+
+    takePhoto();
+
+    if (photoCount < 3) {
+      await new Promise(r => setTimeout(r, 800));
+      startBooth();
+    }
+  }
+
+  function takePhoto() {
+    canvas.width = video.videoWidth;
+    canvas.height = video.videoHeight;
+    canvas.getContext('2d').drawImage(video, 0, 0);
+    imgs[photoCount].src = canvas.toDataURL('image/png');
+    photoCount++;
+  }
+
+  function downloadStrip() {
+    if (photoCount < 3) return alert('Take 3 photos first');
+
+    const stripCanvas = document.createElement('canvas');
+    const w = imgs[0].naturalWidth;
+    const h = imgs[0].naturalHeight * 3;
+
+    stripCanvas.width = w;
+    stripCanvas.height = h;
+
+    const ctx = stripCanvas.getContext('2d');
+    imgs.forEach((img, i) => {
+      ctx.drawImage(img, 0, img.naturalHeight * i);
+    });
+
+    const link = document.createElement('a');
+    link.download = 'photobooth.png';
+    link.href = stripCanvas.toDataURL();
+    link.click();
+  }
+</script>
+
+</body>
+</html>
